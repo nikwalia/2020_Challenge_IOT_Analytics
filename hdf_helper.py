@@ -74,9 +74,9 @@ def get_df_stats(df):
     return stat_df
 
 '''
-Helper to convert our list of statistics dataframes to a 3D np array
+Helper to convert a list of dataframes to a 3D np array
 
 return a 3D numpy array
 '''
-def get_stats_np_arr(df_stats):
-    return np.array([np.array(df) for df in df_stats])
+def get_stats_np_arr(list_df):
+    return np.array([np.array(df) for df in list_df])

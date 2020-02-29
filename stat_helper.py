@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def calc_mean(df):
     return df.mean()
@@ -15,12 +16,20 @@ def calc_max(df):
 def calc_min(df):
     return df.min()
 
-def find_outliers(df):
+def remove_outliers(df):
     first_quartiles = df.quantiles(q = 0.25)
     third_quartiles = df.quantiles(q = 0.75)
     iqr = third_quartiles - first_quartiles
     non_outliers = df.loc[(df >= first_quartiles - 1.5 * iqr) & (df <= third_quartiles + 1.5 * iqr)]
     return non_outliers
+
+def get_outliers(df):
+    first_quartiles = df.quantiles(q = 0.25)
+    third_quartiles = df.quantiles(q = 0.75)
+    iqr = third_quartiles - first_quartiles
+    outliers = df.loc[(df < first_quartiles - 1.5 * iqr) & (df > third_quartiles + 1.5 * iqr)]
+    return outliers
+
 
 def get_stats_list(df):
     return [calc_mean(df),calc_median(df),calc_std(df),calc_max(df),calc_min(df)]
