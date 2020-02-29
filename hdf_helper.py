@@ -4,6 +4,8 @@ import pandas as pd
 import h5py
 import os
 
+from stat_helper import *
+
 '''
 Helper to convert path of hdf file to a dataframe
 
@@ -36,3 +38,24 @@ def get_all_data():
     
     return df_arr
 
+
+'''
+Helper to get statistics for all dataframes
+
+return list of Dataframes containing all the statistics
+'''
+def get_df_stats_list():
+    df_arr = get_all_data
+    stats_df_arr = []
+
+    for df in df_arr:
+        stats_df = get_df_stats(df)
+        stats_df_arr.append(stats_df)
+
+    return stats_df_arr
+
+def get_df_stats(df):
+    stat_df = pd.DataFrame()
+    stat_df['Index'] = ['mean','median','std','min','max','iqr']
+
+    
