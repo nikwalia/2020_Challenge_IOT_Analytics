@@ -25,6 +25,7 @@ def h5_to_df(path):
 
 
 '''
+DO NOT USE UNLESS ABSOLUTELY NEEDED
 Helper to get all data from specified folder
 
 return list of Dataframes containing all our sensor data
@@ -34,7 +35,7 @@ def get_all_data():
     files = os.listdir('./competitionfiles')
 
     for file in files:
-        df_arr.append(h5_to_df(file))
+        df_arr.append(h5_to_df('competitionfiles/' + file))
     
     return df_arr
 
@@ -45,17 +46,25 @@ Helper to get statistics for all dataframes
 return list of Dataframes containing all the statistics
 '''
 def get_df_stats_list():
-    df_arr = get_all_data
     stats_df_arr = []
 
-    for df in df_arr:
-        stats_df = get_df_stats(df)
-        stats_df_arr.append(stats_df)
+    files = os.listdir('./competitionfiles')
+
+    for file in files:
+        stats_df_arr.append(get_df_stats(h5_to_df('competitionfiles/' + file)))
 
     return stats_df_arr
 
+'''
+Helper to get statistics for a single dataframe
+
+return a df
+'''
 def get_df_stats(df):
     stat_df = pd.DataFrame()
     stat_df['Index'] = ['mean','median','std','min','max','iqr']
+
+    for col in df:
+        stat_df[col] = pd.Series([])
 
     
