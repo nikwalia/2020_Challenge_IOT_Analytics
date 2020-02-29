@@ -58,13 +58,25 @@ def get_df_stats_list():
 '''
 Helper to get statistics for a single dataframe
 
-return a df
+return a df containing mean, median, std, min, and max for each channel
 '''
 def get_df_stats(df):
-    stat_df = pd.DataFrame()
-    stat_df['Index'] = ['mean','median','std','min','max','iqr']
+    stat_df = pd.DataFrame(columns=df.columns)
 
-    for col in df:
-        stat_df[col] = pd.Series([])
+    stat_df.loc[len(stat_df)] = calc_mean(df)
+    stat_df.loc[len(stat_df)] = calc_median(df)
+    stat_df.loc[len(stat_df)] = calc_std(df)
+    stat_df.loc[len(stat_df)] = calc_min(df)
+    stat_df.loc[len(stat_df)] = calc_max(df)
 
-    
+    stat_df['Index'] = ['mean','median','std','min','max']
+
+    return stat_df
+
+'''
+Helper to convert our list of statistics dataframes to a 3D np array
+
+return a 3D numpy array
+'''
+def get_stats_np_arr(df_stats):
+    return np.array([np.array(df) for df in df_stats])
