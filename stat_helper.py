@@ -3,14 +3,17 @@ import pandas as pd
 def calc_mean(df):
     return df.mean()
 
+def calc_median(df):
+    return df.median()
+
+def calc_std(df):
+    return df.std()
+
 def calc_max(df):
     return df.max()
 
 def calc_min(df):
     return df.min()
-
-def calc_median(df):
-    return df.median()
 
 def find_outliers(df):
     first_quartiles = df.quantiles(q = 0.25)
@@ -18,3 +21,6 @@ def find_outliers(df):
     iqr = third_quartiles - first_quartiles
     non_outliers = df.loc[(df >= first_quartiles - 1.5 * iqr) & (df <= third_quartiles + 1.5 * iqr)]
     return non_outliers
+
+def get_stats_list(df):
+    return [calc_mean(df),calc_median(df),calc_std(df),calc_max(df),calc_min(df)]
