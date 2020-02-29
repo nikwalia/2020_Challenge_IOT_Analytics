@@ -3,6 +3,9 @@ import pandas as pd
 
 import h5py
 import os
+import re
+import datetime
+from dateutil.parser import parse
 
 from stat_helper import *
 
@@ -16,11 +19,27 @@ def h5_to_df(path):
     h5_file = h5py.File(path,'r')
     channels = list(h5_file['DYNAMIC DATA'].keys())
 
+    filename = r'{}'.format(path).split('\\')[-1].split('/')[-1]
+    date = parse(re.findall('(\d+)', filename)[0])
+
     df = pd.DataFrame()
 
     for channel in channels:
         df[channel] = h5_file['DYNAMIC DATA'][channel]['MEASURED']
 
+    df.datetime = date
+    sample_rate = h5_file['DYNAMIC DATA'][channels[0]].attrs['SAMPLE RATE']
+    time_interval = 1 / sample_rate
+
+    df.sample_rate = sample_rate
+
+    time_values = []
+    for i in range(df.shape[0]):
+        time_values.append(date + datetime.timedelta(seconds = i * time_interval))
+
+    df['datetime'] = pd.to_datetime(time_values)
+    df.index = df['datetime']
+    del df['datetime']
     return df
 
 
