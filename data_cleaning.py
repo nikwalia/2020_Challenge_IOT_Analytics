@@ -40,7 +40,15 @@ Gets a DF that contains the averages of every n elements (cluster_size) to reduc
 
 return df of averages
 '''
-def reduce_dataset_size(df, cluster_size=100):
-    df = df.rolling(cluster_size).mean()
-    df = df.iloc[::cluster_size, :].dropna()
-    return df
+def down_sample(x, f=50):
+    # pad to a multiple of f, so we can reshape
+    # use nan for padding, so we needn't worry about denominator in
+    # last chunk
+    xp = np.r_[x, np.NAN + np.zeros((-len(x) % f,))]
+    # reshape, so each chunk gets its own row, and then take mean
+    return np.nanmean(xp.reshape(-1, f), axis=-1)
+
+def big_endian_problem(df):
+    x = np.array(df, '>i4') # big endian
+    newx = x.byteswap().newbyteorder()
+    return pd.DataFrame(newx)

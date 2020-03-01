@@ -4,14 +4,27 @@ import pandas as pd
 import h5py
 import os
 import re
-import datetime
 from dateutil.parser import parse
 from scipy import signal
-
-from stat_helper import *
+from scipy.ndimage import gaussian_filter1d
+from matplotlib import pyplot as plt
+from datetime import datetime, date, time, timedelta
+import data_cleaning
 
 GLOBAL_SAMPLING_FREQ = 10
-GLOBAL_DAILY_SAMPLES = 24 * 60 * 60 * 10
+GLOBAL_DAILY_SAMPLES = 24 * 60 * 6 * 2
+GLOBAL_TIME_RANGE = []
+for i in range(GLOBAL_DAILY_SAMPLES):
+
+    secs = i * 5
+    hours = int(secs / (3600))
+    remainder = int(secs - hours * 3600)
+    mins = int(remainder / (60))
+    remainder = int(remainder - mins * 60)
+    secs = int(remainder)
+    GLOBAL_TIME_RANGE.append(time(hours, mins, secs))
+
+GLOBAL_ZERO_DATE = datetime(1, 1, 1, 0, 0, 0, 0)
 
 
 '''
@@ -71,7 +84,10 @@ return datetime object
 '''
 def convert_timestamp(str_timestamp):
     split = str_timestamp.split("'")[1].split(' ')
-    date = split[0].split('/')
+    if '/' in split[0]:
+        date = split[0].split('/')
+    else:
+        date = split[0].split('-')
     year = int(date[0])
     month = int(date[1])
     day = int(date[2])
@@ -80,7 +96,7 @@ def convert_timestamp(str_timestamp):
     minute = int(time[1])
     second = int(time[2].split('.')[0])
     millisecond = int(time[2].split('.')[1]) * 1000
-    return datetime.datetime(year, month, day, hour, minute, second, millisecond)
+    return datetime(year, month, day, hour, minute, second, millisecond)
 
 
 '''
@@ -91,8 +107,8 @@ return resampled data. May be upsampled or downsampled
 def resample(data, original_freq, new_freq):
     if original_freq == new_freq:
         return data
-
-    num_new_points = len(data) * new_freq / original/freq
+    
+    num_new_points = int(round(len(data) * new_freq / original_freq))
     return signal.resample(data, num_new_points)
 
 
@@ -143,66 +159,109 @@ def get_stats_np_arr(list_df):
 '''
 Finds the closest timestamp- necessary for mapping
 '''
-def find_closest_timestamp(timestamp, all_timestamps):
-    err = abs(timestamp - all_timestamps[0])
-    best_timestamp = all_timestamps[0]
-    for possible_timestamp in all_timestamps:
-        if abs(timestamp - possible_timestamp) < err:
-            err = abs(timetamp - possible_timestamp)
+def find_closest_timestamp(timestamp):
+    min_err = abs(datetime.combine(GLOBAL_ZERO_DATE, timestamp.time()) - datetime.combine(GLOBAL_ZERO_DATE, GLOBAL_TIME_RANGE[0]))
+    best_timestamp = GLOBAL_TIME_RANGE[0]
+    
+    for possible_timestamp in GLOBAL_TIME_RANGE:
+        potential_err = abs(datetime.combine(GLOBAL_ZERO_DATE, timestamp.time()) - datetime.combine(GLOBAL_ZERO_DATE, possible_timestamp))
+        
+        if potential_err < min_err:
+            min_err = potential_err
             best_timestamp = possible_timestamp
-    return best_timestamp
+#             print(min_err, best_timestamp)
+    
+#     print(min_err, best_timestamp)
+    return datetime.combine(timestamp.date(), best_timestamp)
+
+
+def generate_time_range(begin, end):
+    time_vals = []
+    
+#     print(end_time)
+    
+    while begin <= end:
+        time_vals.append(begin.time())
+        begin = begin + timedelta(seconds = 5)
+        
+    return np.array(time_vals)
 
 
 def get_channel_data(channel_id):
-    channel_df = pd.DataFrame()
+    channel_df = pd.DataFrame(index = GLOBAL_TIME_RANGE)
+    # channel_df['time'] = GLOBAL_TIME_RANGE
+    # channel_df.set_index('time')
+
+    # print(channel_df)
+
     files = os.listdir('./competitionfiles')
 
     unique_dates = []
     for file in files:
-        date = parse(re.findall('(\d+)', filename)[0])
-        if date not in unique_dates:
-            unique_dates.append(date)
+        date_str = re.findall('(\d+)', file)[0]
+        if date_str not in unique_dates:
+            unique_dates.append(date_str)
 
-
-    for date in unique_dates:
+    for date_str in unique_dates:
         files_with_date = []
-
-        formatted_date = date[0:4] + '-' + date[4:6] + '-' + date[6:]
-
-        times = pd.date_range(formatted_date, periods = GLOBAL_DAILY_SAMPLES, freq = '100L')
-        date_series = pd.Series(data = np.NAN, index = times)
-
-        for file in files:
-            if date in file:
-                files_with_date.append(file)
         
-        data_for_date = {}
+        formatted_date = date_str[0:4] + '-' + date_str[4:6] + '-' + date_str[6:]
+
+        date_series = pd.Series(data = np.NAN, index = GLOBAL_TIME_RANGE)
+        for file in files:
+            if date_str in file:
+                files_with_date.append(file)
+
         for file in files_with_date:
+            print(file)
             f = h5py.File('competitionfiles/' + file)
-            readings = f['DYNAMIC DATA'][channel_id]['MEASURED'].to_numpy()
+            if channel_id not in list(f['DYNAMIC DATA'].keys()):
+                continue
+            readings = np.array(f['DYNAMIC DATA'][channel_id]['MEASURED'])
             if len(readings) == 0:
                 continue
+                
+            data_for_date = {}
+
+            data_for_date['start_time'] = convert_timestamp(str(f['DYNAMIC DATA'].attrs['FIRST ACQ TIMESTAMP']))
             
-            start_time = convert_timestamp(str(f['DYNAMIC DATA'].attrs['FIRST ACQ TIMESTAMP']))
-            data_for_date[file]['start_time'] = start_time
+            data_for_date['end_time'] = convert_timestamp(str(f['DYNAMIC DATA'].attrs['LAST ACQ TIMESTAMP']))
+            
 
-            end_time = convert_timestamp(str(f['DYNAMIC DATA'].attrs['LAST ACQ TIMESTAMP']))
-            data_for_date[file]['end_time'] = end_time
-
-            data_for_date[file]['freq'] = float(f['DYNAMIC DATA'][channel_id].attrs['SAMPLE RATE'])
-            data_for_date[file]['sensor_readings'] = f['DYNAMIC DATA'][channel_id]['MEASURED'].to_numpy()
+            data_for_date['freq'] = float(f['DYNAMIC DATA'][channel_id].attrs['SAMPLE RATE'])
+            data_for_date['sensor_readings'] = np.array(f['DYNAMIC DATA'][channel_id]['MEASURED']).astype(np.float64)
 
             # re-sample data
-            data_for_date[file]['sensor_readings'] = downsample_data(data_for_date['sensor_readings'], data_for_date['freq'], GLOBAL_SAMPLING_FREQ)
-            data_for_date[file]['freq'] = GLOBAL_SAMPLING_FREQ
-        
-        for key in data_for_date.keys():
-            mapped_timestamp = find_closest_timestamp(data_for_date[key]['start_time'], times)
-            points = data_for_date[key]['sensor_readings']
-            insert_timestamps = pd.date_range(mapped_timestamp, period = len(points), freq = '100L')
-            date_series.loc[insert_timestamps] = points
+            data_for_date['sensor_readings'] = resample(
+                                                        data_for_date['sensor_readings'],
+                                                        data_for_date['freq'],
+                                                        GLOBAL_SAMPLING_FREQ
+                                                        )
+            
+            data_for_date['sensor_readings'] = data_cleaning.down_sample(data_for_date['sensor_readings'])
+            data_for_date['freq'] = 0.2
+            
+            data_for_date['start_time'] = find_closest_timestamp(data_for_date['start_time'])
+            data_for_date['end_time'] = find_closest_timestamp(data_for_date['end_time'])
 
-        channel_df[datetime.datetime(formatted_date)] = date_series
+            insert_timestamps = generate_time_range(data_for_date['start_time'], data_for_date['end_time'])
 
-        
+            if data_for_date['start_time'].date() < data_for_date['end_time'].date():
+                same_date_loc = np.where(insert_timestamps > data_for_date['end_time'].time())
+                insert_timestamps = insert_timestamps[same_date_loc]
+                data_for_date['sensor_readings'] = data_for_date['sensor_readings'][same_date_loc]
+
+            if len(insert_timestamps) < len(data_for_date['sensor_readings']):
+                data_for_date['sensor_readings'] = data_for_date['sensor_readings'][:-1]
+            elif len(insert_timestamps) > len(data_for_date['sensor_readings']):
+                insert_timestamps = insert_timestamps[:-1]
+
+            date_series.loc[insert_timestamps] = data_for_date['sensor_readings']
+            f.close()
+            
+        # print(date_series.mean())
+        date_series.index = channel_df.index
+        channel_df[parse(formatted_date).date()] = date_series
+        print(channel_df.mean()[-1])
+        print(len(channel_df.columns))
     return channel_df
