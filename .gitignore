@@ -1,4 +1,9 @@
 testing.ipynb
+"Testing Channel Layering.ipynb"
+"Testing Smoothing.ipynb"
+.ipynb_checkpoints/
+__pychache__/\*
+
 trash.py
 ./__pycache__
-./.ipynb_checkpoints
+./.ipynb_checkpoints/
