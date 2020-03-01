@@ -44,3 +44,8 @@ def reduce_dataset_size(df, cluster_size=100):
     df = df.rolling(cluster_size).mean()
     df = df.iloc[::cluster_size, :].dropna()
     return df
+
+def big_endian_problem(df):
+    x = np.array(df, '>i4') # big endian
+    newx = x.byteswap().newbyteorder()
+    return pd.DataFrame(newx)
