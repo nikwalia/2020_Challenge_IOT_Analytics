@@ -13,6 +13,10 @@ from scipy.stats import pearsonr,spearmanr
 pearson_trshld = 0.95
 spearman_trshld = 0.95
 
+
+'''
+Finds the correlation between two time series across 3 different metrics
+'''
 def get_correlation(data1, data2):
     # Linear Correlation
     pearson_corr, _ = pearsonr(data1, data2)
@@ -25,6 +29,11 @@ def get_correlation(data1, data2):
     
     return pearson_corr, spearman_corr, covariance
 
+
+'''
+From a dataframe of time series, find all of the channel pairs that have
+a covariance higher than the threshold
+'''
 def get_related_channels(df):
     related_channels = []
     for col in df.columns:
