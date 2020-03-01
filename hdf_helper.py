@@ -53,7 +53,7 @@ def h5_to_df(path):
 
     time_values = []
     for i in range(df.shape[0]):
-        time_values.append(date + datetime.timedelta(seconds = i * time_interval))
+        time_values.append(date + timedelta(seconds = i * time_interval))
 
     df['datetime'] = pd.to_datetime(time_values)
     df.index = df['datetime']
