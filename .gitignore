@@ -7,3 +7,4 @@ __pychache__/\*
 trash.py
 ./__pycache__
 ./.ipynb_checkpoints/
+*.hd5
