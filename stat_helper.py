@@ -24,6 +24,9 @@ def smooth_values(df):
     return filtered
 
 
+'''
+Use 1.5 x IQR rule
+'''
 def get_outliers(df):
     first_quartiles = df.quantiles(q = 0.25)
     third_quartiles = df.quantiles(q = 0.75)
